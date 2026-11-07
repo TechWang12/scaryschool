@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>恐怖新华一命速通</title>
+<style>
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    margin: 0;
+    overflow: hidden;
+    background: #000;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    font-family: "Songti SC", "SimSun", "STSong", serif;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* ---------- 背景舞台：两层 img 交叉淡入 ---------- */
+  #stage {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .bg-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    filter: brightness(0.85) contrast(1.05);
+    will-change: opacity;
+  }
+
+  /* contain 模式：整张图缩放塞进屏幕，四周露黑底 */
+  .bg-img.contain {
+    object-fit: contain;
+  }
+
+  .bg-img.active { opacity: 1; }
+
+  /* ---------- 暗角 ---------- */
+  #vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center,
+                rgba(0,0,0,0.10) 0%,
+                rgba(0,0,0,0.55) 65%,
+                rgba(0,0,0,0.92) 100%);
+  }
+
+  /* ---------- 底部渐黑 ---------- */
+  #bottomFade {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: clamp(28vh, 45vh, 55vh);
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0) 100%);
+  }
+
+  /* ---------- 打字文字区 ---------- */
+  #textBox {
+    position: relative;
+    z-index: 3;
+    width: min(1150px, 92vw);
+    max-width: 100%;
+    margin-bottom: clamp(24px, 8vh, 80px);
+    padding: 0 clamp(12px, 2vw, 24px);
+    font-size: clamp(15px, 1.7vw + 0.5vh, 26px);
+    line-height: 1.9;
+    letter-spacing: 0.06em;
+    color: #d6d6d6;
+    text-shadow: 0 0 10px rgba(0,0,0,0.95), 0 0 3px rgba(255,255,255,0.12);
+    min-height: 1.9em;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+  }
+
+  @media (max-height: 540px) {
+    #textBox {
+      font-size: clamp(13px, 1.5vw + 0.3vh, 18px);
+      line-height: 1.7;
+      margin-bottom: 12px;
+      letter-spacing: 0.04em;
+    }
+    #bottomFade { height: 70vh; }
+  }
+
+  @media (min-aspect-ratio: 21/9) {
+    #textBox { width: min(1400px, 78vw); }
+  }
+
+  @media (max-width: 420px) {
+    #textBox { font-size: clamp(15px, 3.9vw, 20px); }
+  }
+
+  .line {
+    display: block;
+    min-height: 1.2em;
+  }
+
+  /* ---------- 打字光标 ---------- */
+  .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: #cfcfcf;
+    vertical-align: -0.12em;
+    margin-left: 3px;
+    box-shadow: 0 0 8px rgba(200,200,200,0.7);
+    animation: blink 1s steps(1, end) infinite;
+  }
+  .line:not(:last-child) .cursor { display: none; }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- 选项按钮容器 ---------- */
+  #choices {
+    position: fixed;
+    left: 50%;
+    bottom: clamp(24px, 8vh, 80px);
+    transform: translateX(-50%);
+    z-index: 11;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(10px, 1.8vh, 18px);
+    width: min(420px, 82vw);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  #choices.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .choice-btn {
+    display: block;
+    width: 100%;
+    padding: clamp(12px, 1.8vh, 18px) clamp(16px, 2.5vw, 28px);
+    background: rgba(15, 15, 20, 0.78);
+    border: 1px solid rgba(200, 200, 210, 0.28);
+    border-radius: 4px;
+    color: #cfcfcf;
+    font-family: inherit;
+    font-size: clamp(14px, 1.3vw + 0.4vh, 19px);
+    letter-spacing: 0.1em;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+    box-shadow: 0 0 16px rgba(0,0,0,0.7), inset 0 0 12px rgba(0,0,0,0.4);
+    text-shadow: 0 0 6px rgba(0,0,0,0.9);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .choice-btn:hover,
+  .choice-btn:active {
+    background: rgba(45, 45, 55, 0.88);
+    border-color: rgba(220, 220, 230, 0.65);
+    color: #f0f0f0;
+  }
+
+  @media (min-width: 720px) and (orientation: landscape) {
+    #choices {
+      flex-direction: row;
+      width: auto;
+      max-width: 92vw;
+    }
+    .choice-btn {
+      width: auto;
+      min-width: 220px;
+    }
+  }
+
+  /* ---------- 结局黑屏与文字 ---------- */
+  #stage.black .bg-img { opacity: 0; }
+
+  #ending {
+    position: fixed;
+    inset: 0;
+    z-index: 12;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: clamp(60px, 14vh, 160px);
+    padding-left: 5vw;
+    padding-right: 5vw;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.2s ease;
+    overflow-y: auto;
+  }
+  #ending.show { opacity: 1; }
+
+  .ending-title {
+    font-size: clamp(36px, 6.5vw, 84px);
+    color: #b00000;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    text-align: center;
+    text-shadow: 0 0 20px rgba(180, 0, 0, 0.65), 0 0 40px rgba(140, 0, 0, 0.4);
+    margin-bottom: clamp(36px, 9vh, 100px);
+    font-family: inherit;
+  }
+
+  .ending-body {
+    font-size: clamp(17px, 2.2vw, 26px);
+    color: #999;
+    letter-spacing: 0.15em;
+    line-height: 2.2;
+    text-align: center;
+    text-shadow: 0 0 8px rgba(0,0,0,0.9);
+    font-family: inherit;
+    max-width: min(1000px, 90vw);
+  }
+
+  /* ---------- 全屏点击层 ---------- */
+  #clickLayer {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    cursor: default;
+  }
+</style>
+</head>
+<body>
+
+  <div id="stage">
+    <img class="bg-img" id="bgA" alt="">
+    <img class="bg-img" id="bgB" alt="">
+  </div>
+  <div id="vignette"></div>
+  <div id="bottomFade"></div>
+
+  <div id="textBox">
+    <div id="lines"></div>
+  </div>
+
+  <div id="choices"></div>
+  <div id="ending"></div>
+  <div id="clickLayer"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+   * 1. 场景图
+   * ============================================================ */
+const SCENES = {
+  intro: {
+    image: 'img/schooldoor.jpg',
+    text: '今天你来到学校，但发现天空黑沉沉的，路上也几乎没有人。',
+    next: 'fog'
+  },
+  fog: {
+    image: 'img/schooldoor.jpg',
+    text: '今天早上的雾有点大，因为我早起了半个小时，但也懒得管那么多了，就早点来了学校。一路上几乎没见到人，天空阴沉沉的，仿佛要将我吞没',
+    choices: [
+      { label: '感到不对劲快点回家', next: 'home_road' },
+      { label: '我是个学生我要上学', next: 'school_road' }
+    ]
+  },
+  home_road: {
+    image: 'img/HomeRoad.jpg',
+    text: '你往回看，忽然发觉这里如此诡异。突然，一切变得异常扭曲，你痛苦地坐在地上，再也没有起来……',
+    next: 'bad_ending_1'
+  },
+  school_road: {
+    image: 'img/SchoolRoad.jpg',
+    text: '你鼓起勇气进了学校，但是学校路上一个人也没有，你却并没有察觉这异常，反而走进了教学楼。',
+    next: 'door_room'
+  },
+  door_room: {
+    image: 'img/DoorRoom.jpg',
+    text: '此时你并不知道这时候的保安亭已经出现了一些独特的状况\n更准确来说……是异常',
+    swapImage: 'img/DoorRoom_Blood.jpg',
+    swapImageAtIndex: 25,
+    next: 'classroom_01'
+  },
+  classroom_01: {
+    image: 'img/Classroom01.jpg',
+    text: '终于来到了教室，但已经上课很久了，老师也不知道在哪里',
+    choiceDelay: 1000,
+    choices: [
+      { label: '打报告进去', next: 'classroom_02' },
+      { label: '悄悄的进去', next: 'classroom_sit' }
+    ]
+  },
+  classroom_02: {
+    image: 'img/Classroom02.jpg',
+    text: '同学们怎么都看向我呀？我是做错……\n啊啊啊啊啊',
+    swapImage: 'img/Classroom03.jpg',
+    swapImageAtIndex: 18,
+    next: 'bad_ending_2'
+  },
+  classroom_sit: {
+    image: 'img/ClassroomSit.jpg',
+    text: '我选了最后一个座位坐了下去，那是唯一一个空位。\n我看向黑板，老师正在讲课，这时我感到我的同桌正在盯着我，我想看他，但仿佛有什么力量让我并不敢跟他对视，只能心惊胆战的熬过了一节课',
+    next: 'blackout_1'
+  },
+
+  blackout_1: {
+    type: 'black_transition',
+    waitMs: 3000,
+    audio: 'audio/march.m4a',
+    audioVolume: 0.5,
+    afterAudioDelay: 500,
+    next: 'classroom_sit_after'
+  },
+
+  classroom_sit_after: {
+    keepBlack: true,
+    text: '竟然不知不觉睡着了，这时候大家估计都要上操了吧。',
+    choices: [
+      { label: '赶快起来去上操', next: 'no_one_classroom' },
+      { label: '假装睡觉等一会', next: 'sleep_black' }
+    ]
+  },
+
+  no_one_classroom: {
+    image: 'img/NoOneClassroom.jpg',
+    text: '看来大家都走了',
+    choices: [
+      { label: '直接去操场', next: 'playground' },
+      { label: '到处逛一逛', next: 'archives_room' }
+    ]
+  },
+
+  sleep_black: {
+    keepBlack: true,
+    text: '(你不小心又睡了过去)',
+    next: 'bad_ending_3'
+  },
+
+  playground: {
+    image: 'img/Playground.jpg',
+    text: '同学们都在玩耍呢',
+    choices: [
+      { label: '加入他们', next: 'playground_join' },
+      { label: '快点逃跑', next: 'playground_escape' }
+    ]
+  },
+
+  playground_join: {
+    type: 'black_transition',
+    waitMs: 3000,
+    next: 'playground_join_text'
+  },
+  playground_join_text: {
+    keepBlack: true,
+    text: '与它们玩耍，可真是让人快乐呢',
+    next: 'bad_ending_4'
+  },
+
+  playground_escape: {
+    type: 'black_transition',
+    fadeOutMusicMs: 5000,
+    waitMs: 0,
+    audio: 'audio/Pant.m4a',
+    audioVolume: 0.6,
+    afterAudioDelay: 3000,
+    next: 'playground_escape_text'
+  },
+  playground_escape_text: {
+    keepBlack: true,
+    text: '我出来了……我出来了\n但我为什么要出来……\n对，我要上学…上学！',
+    next: 'bad_ending_5'
+  },
+
+  /* ---------- 档案室支线 ---------- */
+
+  archives_room: {
+    image: 'img/ArchivesRoom.jpg',
+    text: '怎么逛到这里了……这里是档案室？\n正好翻一翻',
+    next: 'archives_black'
+  },
+
+  archives_black: {
+    type: 'black_transition',
+    waitMs: 0,
+    fadeOutMusicMs: 500,
+    audio: 'audio/Pull.m4a',
+    audioVolume: 0.6,
+    afterAudioDelay: 1000,
+    next: 'archives_news'
+  },
+
+  /* 黑底 + 居中图片：打完文字后进 waiting，用户点击才进结局六 */
+  archives_news: {
+    image: 'img/News.jpg',
+    imageMode: 'contain',
+    text: '这…这怎么可能…不…都是假的，假的……',
+    next: 'bad_ending_6'
+  },
+
+  bad_ending_1: {
+    type: 'black_ending',
+    title: '结局一 困校',
+    lines: ['你永远留在了这里', '永远……']
+  },
+  bad_ending_2: {
+    type: 'black_ending',
+    title: '结局二 吞噬',
+    lines: ['同学们…都…都太热情了……']
+  },
+  bad_ending_3: {
+    type: 'black_ending',
+    title: '结局三 沉睡',
+    lines: ['永远不醒，不也挺好，是吧'],
+    fadeOutMusicMs: 3000
+  },
+  bad_ending_4: {
+    type: 'black_ending',
+    title: '结局四 同化',
+    lines: ['有些异常，看多了，就不算异常了'],
+    fadeOutMusicMs: 800
+  },
+  bad_ending_5: {
+    type: 'black_ending',
+    title: '结局五 入魔',
+    lines: ['"上学…哈哈哈…上学…上学……哈哈哈哈哈"'],
+    fadeOutMusicMs: 1500
+  },
+  bad_ending_6: {
+    type: 'black_ending',
+    title: '结局六 疯子',
+    lines: ['我没死！我没死……呜哈哈哈哈哈'],
+    fadeOutMusicMs: 800
+  }
+};
+
+  const START_SCENE = 'intro';
+
+  /* 结局总数：达到这个数量时，改为显示作者的信 */
+  const TOTAL_ENDINGS = 6;
+
+  /* 作者信正文（每项一行） */
+  const LETTER_LINES = [
+    '恭喜你，你把六个结局全打通了！',
+    '这个游戏我在半夜刷恐怖视频突然想做，于是借助DeepSeek成功完成了代码部分，豆包完成P图，Acode负责代码编程环境，学校公众号提供素材，我自己测试bug和构思剧情。',
+    '前后花了我7个小时，差点给我累死了。',
+    '你问我是不是这个学校的，不然呢，不然我也没兴趣去肯花7个小时做，嘿嘿。',
+    '觉得好玩转发一下呗，别转发给老师家长就行，不然我只能忍痛删项目喽'
+  ];
+
+  /* ============================================================
+   * 2. 全局可调参数
+   * ============================================================ */
+  const CFG = {
+    charSpeedMin: 95,
+    charSpeedMax: 175,
+    punctPause: 320,
+    sceneStartDelay: 800,
+    betweenSceneDelay: 500
+  };
+
+  /* ============================================================
+   * 3. DOM 引用
+   * ============================================================ */
+  const linesEl    = document.getElementById('lines');
+  const clickLayer = document.getElementById('clickLayer');
+  const imageLayers = [
+    document.getElementById('bgA'),
+    document.getElementById('bgB')
+  ];
+  const choicesEl = document.getElementById('choices');
+  const endingEl  = document.getElementById('ending');
+  const stageEl   = document.getElementById('stage');
+
+  /* ============================================================
+   * 4. 全局状态
+   * ============================================================ */
+  let state = 'idle';
+  let currentSceneId = null;
+  let charIndex = 0;
+  let currentLine = null;
+  let typingTimer = null;
+  let typingToken = 0;
+  let swapDone = false;
+  let restartBtnTimer = null;
+  let choiceDelayTimer = null;
+  let nextDelayTimer = null;
+  let currentMusicHandle = null;
+
+  // 已触发过的结局集合（用 title 作 key，跨局持久，直到页面刷新）
+  const endingsUnlocked = new Set();
+
+  /* ============================================================
+   * 5. 音频引擎
+   * ============================================================ */
+  const Audio = (function () {
+    let ac = null, master = null, noiseBuf = null;
+    const musicCache = {};
+    const musicLoading = {};
+
+    function init() {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        ac = new Ctx();
+        master = ac.createGain();
+        master.gain.value = 0.9;
+        master.connect(ac.destination);
+
+        const len = Math.floor(ac.sampleRate * 0.06);
+        noiseBuf = ac.createBuffer(1, len, ac.sampleRate);
+        const data = noiseBuf.getChannelData(0);
+        for (let i = 0; i < len; i++) {
+          data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+        }
+      } catch (e) { ac = null; }
+    }
+
+    function playKey() {
+      if (!ac || ac.state !== 'running' || !noiseBuf) return;
+      const t = ac.currentTime;
+      const src = ac.createBufferSource();
+      src.buffer = noiseBuf;
+      src.playbackRate.value = 0.85 + Math.random() * 0.5;
+
+      const bp = ac.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 900 + Math.random() * 1500;
+      bp.Q.value = 1.1;
+
+      const hp = ac.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 500;
+
+      const g = ac.createGain();
+      const vol = 0.07 + Math.random() * 0.06;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.055);
+
+      src.connect(bp); bp.connect(hp); hp.connect(g); g.connect(master);
+      src.start(t); src.stop(t + 0.09);
+    }
+
+    function resume() {
+      return new Promise(function (resolve) {
+        if (!ac) return resolve(false);
+        if (ac.state === 'running') return resolve(true);
+        let settled = false;
+        const finish = function (v) { if (!settled) { settled = true; resolve(v); } };
+        ac.resume().then(function () { finish(ac.state === 'running'); })
+                   .catch(function () { finish(false); });
+        setTimeout(function () { finish(ac.state === 'running'); }, 400);
+      });
+    }
+
+    function loadMusic(src) {
+      if (!ac || !src) return Promise.resolve(null);
+      if (musicCache[src]) return Promise.resolve(musicCache[src]);
+      if (musicLoading[src]) return musicLoading[src];
+
+      musicLoading[src] = fetch(src)
+        .then(function (res) { return res.arrayBuffer(); })
+        .then(function (arr) { return ac.decodeAudioData(arr); })
+        .then(function (buf) {
+          musicCache[src] = buf;
+          return buf;
+        })
+        .catch(function (err) {
+          console.warn('[Audio] 加载失败：', src, err);
+          return null;
+        });
+
+      return musicLoading[src];
+    }
+
+    function playMusic(src, opts) {
+      opts = opts || {};
+      if (!ac || ac.state !== 'running') return null;
+      const buf = musicCache[src];
+      if (!buf) return null;
+
+      const node = ac.createBufferSource();
+      node.buffer = buf;
+      if (opts.loop) node.loop = true;
+
+      const g = ac.createGain();
+      const target = opts.volume != null ? opts.volume : 0.5;
+      const t = ac.currentTime;
+
+      g.gain.setValueAtTime(0, t);
+      if (opts.fadeIn && opts.fadeIn > 0) {
+        g.gain.linearRampToValueAtTime(target, t + opts.fadeIn);
+      } else {
+        g.gain.linearRampToValueAtTime(target, t + 0.01);
+      }
+
+      node.connect(g);
+      g.connect(master);
+      node.start(t);
+
+      return { source: node, gain: g, stopped: false };
+    }
+
+    function stopMusic(handle, fadeOutMs) {
+      if (!handle || !ac || handle.stopped) return;
+      handle.stopped = true;
+
+      const t = ac.currentTime;
+      const fade = (fadeOutMs || 0) / 1000;
+      const param = handle.gain.gain;
+
+      try {
+        if (fade > 0) {
+          if (typeof param.cancelAndHoldAtTime === 'function') {
+            param.cancelAndHoldAtTime(t);
+          } else {
+            const v = param.value;
+            param.cancelScheduledValues(t);
+            param.setValueAtTime(v, t);
+          }
+          param.linearRampToValueAtTime(0.0001, t + fade);
+          handle.source.stop(t + fade + 0.05);
+        } else {
+          param.cancelScheduledValues(t);
+          param.setValueAtTime(0, t);
+          handle.source.stop(t + 0.02);
+        }
+      } catch (e) {}
+    }
+
+    return { init, playKey, resume, loadMusic, playMusic, stopMusic };
+  })();
+
+  /* ============================================================
+   * 6. 图片舞台
+   * ============================================================ */
+  const Stage = (function () {
+    let activeIndex = -1;
+    let currentSrc = null;
+    const cache = new Set();
+
+    function preload(src) {
+      if (!src || cache.has(src)) return Promise.resolve(true);
+      return new Promise(function (resolve) {
+        const img = new Image();
+        img.onload  = function () { cache.add(src); resolve(true); };
+        img.onerror = function () { resolve(false); };
+        img.src = src;
+      });
+    }
+
+    async function switchTo(src, mode) {
+      if (!src || src === currentSrc) return;
+      await preload(src);
+
+      const nextIdx = activeIndex === 0 ? 1 : 0;
+      const nextLayer = imageLayers[nextIdx];
+      const prevLayer = imageLayers[activeIndex];
+
+      nextLayer.src = src;
+      if (mode === 'contain') {
+        nextLayer.classList.add('contain');
+      } else {
+        nextLayer.classList.remove('contain');
+      }
+
+      void nextLayer.offsetWidth;
+      nextLayer.classList.add('active');
+      if (prevLayer) prevLayer.classList.remove('active');
+
+      activeIndex = nextIdx;
+      currentSrc = src;
+    }
+
+    function setInitial(src) {
+      const layer = imageLayers[0];
+      layer.src = src;
+      layer.classList.add('active');
+      activeIndex = 0;
+      currentSrc = src;
+    }
+
+    return { preload, switchTo, setInitial };
+  })();
+
+  /* ============================================================
+   * 7. 打字机
+   * ============================================================ */
+  const PUNCT = '，。！？、；：…—';
+
+  function createLine() {
+    const line = document.createElement('div');
+    line.className = 'line';
+    const content = document.createElement('span');
+    content.className = 'content';
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    line.appendChild(content);
+    line.appendChild(cursor);
+    linesEl.appendChild(line);
+    return { line: line, content: content };
+  }
+
+  function clearAllLines() {
+    linesEl.innerHTML = '';
+    currentLine = null;
+  }
+
+  function startTypingCurrentScene() {
+    clearAllLines();
+    currentLine = createLine();
+    charIndex = 0;
+    swapDone = false;
+    state = 'typing';
+
+    typingToken++;
+    const token = typingToken;
+    const delay = currentSceneId === START_SCENE
+      ? CFG.sceneStartDelay
+      : CFG.betweenSceneDelay;
+
+    typingTimer = setTimeout(function () { typeNext(token); }, delay);
+  }
+
+  function typeNext(token) {
+    if (state !== 'typing' || token !== typingToken) return;
+    const scene = SCENES[currentSceneId];
+    const text = scene.text;
+
+    if (charIndex >= text.length) { onSceneTypedOut(); return; }
+
+    if (scene.swapImage && !swapDone) {
+      const swapAt = (scene.swapImageAtIndex != null)
+        ? scene.swapImageAtIndex
+        : (scene.swapImageAt != null ? text.length * scene.swapImageAt : Infinity);
+      if (charIndex >= swapAt) {
+        swapDone = true;
+        Stage.switchTo(scene.swapImage);
+      }
+    }
+
+    const ch = text.charAt(charIndex++);
+    currentLine.content.textContent += ch;
+    Audio.playKey();
+
+    let delay = CFG.charSpeedMin + Math.random() * (CFG.charSpeedMax - CFG.charSpeedMin);
+    if (PUNCT.indexOf(ch) !== -1) delay += CFG.punctPause;
+    if (Math.random() < 0.05) delay += 200 + Math.random() * 250;
+
+    typingTimer = setTimeout(function () { typeNext(token); }, delay);
+  }
+
+  function fastForwardTyping() {
+    if (state !== 'typing' || !currentLine) return;
+    clearTimeout(typingTimer);
+    typingToken++;
+
+    const scene = SCENES[currentSceneId];
+    const text = scene.text;
+
+    if (scene.swapImage && !swapDone) {
+      swapDone = true;
+      Stage.switchTo(scene.swapImage);
+    }
+
+    currentLine.content.textContent = text;
+    charIndex = text.length;
+    onSceneTypedOut();
+  }
+
+  function onSceneTypedOut() {
+    const scene = SCENES[currentSceneId];
+    if (scene.choices && scene.choices.length) {
+      if (scene.choiceDelay) {
+        state = 'choice_delay';
+        clearTimeout(choiceDelayTimer);
+        choiceDelayTimer = setTimeout(function () {
+          if (state !== 'choice_delay') return;
+          clearAllLines();
+          showChoices(scene.choices);
+          state = 'choosing';
+        }, scene.choiceDelay);
+      } else {
+        state = 'waiting_choice';
+      }
+    } else if (scene.next && SCENES[scene.next]) {
+      if (scene.nextDelay) {
+        state = 'next_delay';
+        clearTimeout(nextDelayTimer);
+        nextDelayTimer = setTimeout(function () {
+          if (state !== 'next_delay') return;
+          state = 'starting';
+          goToScene(scene.next);
+        }, scene.nextDelay);
+      } else {
+        state = 'waiting';
+      }
+    } else {
+      state = 'done';
+    }
+  }
+
+  /* ============================================================
+   * 8. 场景管理
+   * ============================================================ */
+  async function goToScene(sceneId) {
+    const scene = SCENES[sceneId];
+    if (!scene) { state = 'done'; return; }
+
+    currentSceneId = sceneId;
+
+    // 结局场景：黑屏 + 结局文字
+    if (scene.type === 'black_ending') {
+      clearAllLines();
+      stageEl.classList.add('black');
+      if (scene.fadeOutMusicMs && currentMusicHandle) {
+        Audio.stopMusic(currentMusicHandle, scene.fadeOutMusicMs);
+        currentMusicHandle = null;
+      }
+      showBlackEnding(scene);
+      state = 'done';
+      return;
+    }
+
+    // 黑屏过渡
+    if (scene.type === 'black_transition') {
+      clearAllLines();
+      stageEl.classList.add('black');
+      state = 'starting';
+
+      if (scene.fadeOutMusicMs && currentMusicHandle) {
+        Audio.stopMusic(currentMusicHandle, scene.fadeOutMusicMs);
+        currentMusicHandle = null;
+      }
+
+      const audioReady = scene.audio ? Audio.loadMusic(scene.audio) : Promise.resolve(null);
+
+      setTimeout(function () {
+        audioReady.then(function () {
+          if (scene.audio) {
+            const h = Audio.playMusic(scene.audio, {
+              volume: scene.audioVolume != null ? scene.audioVolume : 0.5,
+              loop: !!scene.audioLoop,
+              fadeIn: scene.audioFadeIn || 0
+            });
+            if (h) currentMusicHandle = h;
+          }
+          const after = scene.afterAudioDelay || 0;
+          const enter = function () { if (scene.next) goToScene(scene.next); };
+          if (after > 0) setTimeout(enter, after);
+          else enter();
+        });
+      }, scene.waitMs || 0);
+      return;
+    }
+
+    // 通用场景
+    if (scene.fadeOutMusicMs && currentMusicHandle) {
+      Audio.stopMusic(currentMusicHandle, scene.fadeOutMusicMs);
+      currentMusicHandle = null;
+    }
+
+    if (scene.image) {
+      await Stage.switchTo(scene.image, scene.imageMode || 'cover');
+    }
+    if (!scene.keepBlack) {
+      stageEl.classList.remove('black');
+    }
+
+    const nextId = scene.next;
+    if (nextId && SCENES[nextId]) {
+      if (SCENES[nextId].image) Stage.preload(SCENES[nextId].image);
+      if (SCENES[nextId].audio) Audio.loadMusic(SCENES[nextId].audio);
+    }
+
+    if (scene.swapImage) Stage.preload(scene.swapImage);
+
+    if (scene.choices && scene.choices.length) {
+      scene.choices.forEach(function (c) {
+        if (c.next && SCENES[c.next] && SCENES[c.next].image) {
+          Stage.preload(SCENES[c.next].image);
+        }
+      });
+    }
+
+    startTypingCurrentScene();
+  }
+
+  /* ============================================================
+   * 9. 输入处理
+   * ============================================================ */
+  async function handleClick() {
+    if (state === 'typing') { fastForwardTyping(); return; }
+
+    if (state === 'waiting_choice') {
+      state = 'starting';
+      clearAllLines();
+      showChoices(SCENES[currentSceneId].choices);
+      state = 'choosing';
+      return;
+    }
+
+    if (state === 'waiting') {
+      state = 'starting';
+      await Audio.resume();
+      goToScene(SCENES[currentSceneId].next);
+      return;
+    }
+
+    if (state === 'idle') {
+      state = 'starting';
+      await Audio.resume();
+      goToScene(START_SCENE);
+      return;
+    }
+    // choice_delay / next_delay / choosing / done / starting 状态点击忽略
+  }
+
+  function showChoices(choices) {
+    choicesEl.innerHTML = '';
+    choices.forEach(function (c) {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.type = 'button';
+      btn.textContent = c.label;
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        onChoiceSelected(c);
+      });
+      choicesEl.appendChild(btn);
+    });
+    choicesEl.classList.add('show');
+  }
+
+  function hideChoices() {
+    choicesEl.classList.remove('show');
+    choicesEl.innerHTML = '';
+  }
+
+  async function onChoiceSelected(choice) {
+    if (state !== 'choosing') return;
+    state = 'starting';
+    hideChoices();
+    await Audio.resume();
+    goToScene(choice.next);
+  }
+
+  // 显示黑屏结局（并在结局全解锁后把按钮改为「阅读作者的信」）
+  function showBlackEnding(scene) {
+    clearTimeout(restartBtnTimer);
+    endingEl.innerHTML = '';
+
+    // 记录这个结局已经触发过
+    if (scene.title) endingsUnlocked.add(scene.title);
+
+    const title = document.createElement('div');
+    title.className = 'ending-title';
+    title.textContent = scene.title || '';
+    endingEl.appendChild(title);
+
+    const body = document.createElement('div');
+    body.className = 'ending-body';
+    (scene.lines || []).forEach(function (line) {
+      const div = document.createElement('div');
+      div.textContent = line;
+      body.appendChild(div);
+    });
+    endingEl.appendChild(body);
+
+    requestAnimationFrame(function () {
+      endingEl.classList.add('show');
+    });
+
+    // 0.5 秒后决定按钮：全部通关 → 读信；否则 → 从头开始
+    restartBtnTimer = setTimeout(function () {
+      const allCleared = endingsUnlocked.size >= TOTAL_ENDINGS;
+
+      const restartBtn = document.createElement('button');
+      restartBtn.className = 'choice-btn';
+      restartBtn.type = 'button';
+      restartBtn.textContent = allCleared ? '阅读作者的信' : '从头开始';
+      restartBtn.style.position = 'absolute';
+      restartBtn.style.left = '50%';
+      restartBtn.style.bottom = 'clamp(24px, 8vh, 80px)';
+      restartBtn.style.transform = 'translateX(-50%)';
+      restartBtn.style.width = 'auto';
+      restartBtn.style.minWidth = '180px';
+      restartBtn.style.pointerEvents = 'auto';
+      restartBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (allCleared) showLetter();
+        else restartGame();
+      });
+      endingEl.appendChild(restartBtn);
+    }, 500);
+  }
+
+  // 显示作者的信：点任意处回到起点（保留已解锁记录）
+  function showLetter() {
+    clearTimeout(restartBtnTimer);
+    endingEl.innerHTML = '';
+
+    const title = document.createElement('div');
+    title.className = 'ending-title';
+    title.textContent = '来自作者的信';
+    endingEl.appendChild(title);
+
+    const body = document.createElement('div');
+    body.className = 'ending-body';
+    LETTER_LINES.forEach(function (line) {
+      const div = document.createElement('div');
+      div.textContent = line;
+      div.style.marginBottom = '0.9em';
+      div.style.lineHeight = '1.9';
+      div.style.textAlign = 'left';
+      body.appendChild(div);
+    });
+    endingEl.appendChild(body);
+
+    const tip = document.createElement('div');
+    tip.className = 'ending-body';
+    tip.style.marginTop = 'clamp(30px, 6vh, 60px)';
+    tip.style.opacity = '0.55';
+    tip.style.fontSize = 'clamp(14px, 1.5vw, 18px)';
+    tip.textContent = '—— 点击屏幕任意处，从头开始';
+    endingEl.appendChild(tip);
+
+    requestAnimationFrame(function () {
+      endingEl.classList.add('show');
+    });
+
+    // 一次性点击监听：清空信 + 回到起点
+    clickLayer.addEventListener('pointerdown', function onLetterClick() {
+      clickLayer.removeEventListener('pointerdown', onLetterClick);
+      endingEl.classList.remove('show');
+      endingEl.innerHTML = '';
+      restartGame();
+    }, { once: true });
+  }
+
+  // 从头开始：清状态、停音乐、回到起点（不清 endingsUnlocked）
+  function restartGame() {
+    clearTimeout(restartBtnTimer);
+    clearTimeout(typingTimer);
+    clearTimeout(choiceDelayTimer);
+    clearTimeout(nextDelayTimer);
+
+    if (currentMusicHandle) {
+      Audio.stopMusic(currentMusicHandle, 300);
+      currentMusicHandle = null;
+    }
+
+    endingEl.classList.remove('show');
+    endingEl.innerHTML = '';
+
+    state = 'starting';
+    currentSceneId = null;
+    charIndex = 0;
+    currentLine = null;
+    swapDone = false;
+    clearAllLines();
+
+    goToScene(START_SCENE);
+  }
+
+  /* ============================================================
+   * 10. 启动
+   * ============================================================ */
+  async function boot() {
+    Audio.init();
+
+    const startScene = SCENES[START_SCENE];
+    if (startScene && startScene.image) {
+      await Stage.preload(startScene.image);
+      Stage.setInitial(startScene.image);
+    }
+
+    clickLayer.addEventListener('pointerdown', handleClick);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === ' ' || e.key === 'Enter') handleClick();
+    });
+
+    const ok = await Audio.resume();
+    if (ok) goToScene(START_SCENE);
+    else state = 'idle';
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>
